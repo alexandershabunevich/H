@@ -1,0 +1,178 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dtt.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "dtt.name" . }}
+    helm.sh/chart: {{ include "dtt.chart" . }}
+    #app.kubernetes.io/instance: {{ .Release.Name }}
+    #app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "dtt.name" . }}
+      #app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "dtt.name" . }}
+        #app.kubernetes.io/instance: {{ .Release.Name }}
+        #role: dtt
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.global.repository }}/dtt:{{ .Values.global.dttTag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          env:
+            - name: basic.url
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.basic.url
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.base.url.relative
+              value: {{ .Values.global.dttRelativeUrl }}
+            - name: root.dtt
+              value: "/dtt/"
+            - name: cookie.path.dtt
+              value: "/dtt/"
+            - name: dtt.base.url
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.base.url
+                  name: {{ include "dtt.name" . }}
+            - name: ali.oss.provider.whitelist
+              valueFrom:
+                secretKeyRef:
+                  key: ali.oss.provider.whitelist
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.pentaho.url
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.pentaho.url
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.pentaho.username
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.pentaho.username
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.pentaho.password
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.pentaho.password
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.db.url
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.db.url
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.db.username
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.db.username
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.db.password
+              valueFrom:
+                secretKeyRef:
+                  key: dtt.db.password
+                  name: {{ include "dtt.name" . }}
+            - name: ali.oss.bucket
+              valueFrom:
+                secretKeyRef:
+                  key: ali.oss.bucket
+                  name: {{ include "dtt.name" . }}
+            - name: ali.oss.bucket.archive
+              valueFrom:
+                secretKeyRef:
+                  key: ali.oss.bucket.archive
+                  name: {{ include "dtt.name" . }}
+            - name: ali.oss.keyid
+              valueFrom:
+                secretKeyRef:
+                  key: ali.oss.keyid
+                  name: {{ include "dtt.name" . }}
+            - name: ali.oss.keysecret
+              valueFrom:
+                secretKeyRef:
+                  key: ali.oss.keysecret
+                  name: {{ include "dtt.name" . }}
+            - name: ali.oss.proxy.url
+              value: ""
+            - name: ali.oss.proxy.port
+              value: "0"
+            - name: ali.oss.protocol
+              value: "https://"
+            - name: openid.issuer
+              valueFrom:
+                secretKeyRef:
+                  key: openid.issuer
+                  name: {{ include "dtt.name" . }}
+            - name: openid.client.cred.audience
+              valueFrom:
+                secretKeyRef:
+                  key: openid.client.cred.audience
+                  name: {{ include "dtt.name" . }}
+            - name: openid.audience
+              valueFrom:
+                secretKeyRef:
+                  key: openid.audience
+                  name: {{ include "dtt.name" . }}
+            - name: okta.dtt.user.group
+              valueFrom:
+                secretKeyRef:
+                  key: okta.dtt.user.group
+                  name: {{ include "dtt.name" . }}
+            - name: dtt.pentaho.attempts
+              value: "3"
+            - name: dtt.pentaho.delay
+              value: "5"
+            - name: aliyun_logs_{{ include "dtt.name" . }}
+              value: /opt/logs/magnum/*.log
+            - name: aliyun_logs_tomcat
+              value: /usr/local/tomcat/logs/*.log
+            - name: aliyun_logs_stdout
+              value: stdout
+            - name: aliyun_logs_{{ include "dtt.name" . }}_tags
+              value: version={{ .Chart.Version }}
+            - name: aliyun_logs_tomcat_tags
+              value: version={{ .Chart.Version }}
+            - name: aliyun_logs_stdout_tags
+              value: version={{ .Chart.Version }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+#          livenessProbe:
+#            httpGet:
+#              path: /rest/health/
+#              port: http
+#          readinessProbe:
+#            httpGet:
+#              path: /rest/health/
+#              port: http
+          volumeMounts:
+            - name: aliyun-logs-{{ include "dtt.name" . }}
+              mountPath: /opt/logs/magnum/
+            - name: aliyun-logs-tomcat
+              mountPath: /opt/tomcat/logs/
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      imagePullSecrets:
+        - name: {{ .Values.global.secrets.containerRegistrySecretName }}
+      volumes:
+        - name: aliyun-logs-{{ include "dtt.name" . }}
+          emptyDir: {}
+        - name: aliyun-logs-tomcat
+          emptyDir: {}
